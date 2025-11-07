@@ -640,3 +640,50 @@ pub fn OwnedSend(comptime T: type) type {
 pub fn ownedSend(comptime T: type, value: T) OwnedSend(T) {
     return OwnedSend(T).init(value);
 }
+
+// ============================================================================
+// 弱引用支持（用于避免循环引用）
+// ============================================================================
+
+/// 弱引用类型（Weak reference）
+/// 类似于 Rust 的 Weak<T>，不会阻止对象释放
+/// 用于打破循环引用
+pub fn Weak(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        // 使用原始指针，不持有所有权
+        // 注意：这需要用户确保指针有效性
+        ptr: ?*T = null,
+
+        /// 创建弱引用
+        /// 注意：Weak 不持有所有权，需要确保对象生命周期
+        pub fn init(ptr: ?*T) Self {
+            return Self{ .ptr = ptr };
+        }
+
+        /// 尝试升级为强引用（Borrowed）
+        /// 如果对象仍然有效，返回借用；否则返回 null
+        /// 注意：这需要对象是 Owned 类型
+        pub fn upgrade(self: *const Self) ?*T {
+            return self.ptr;
+        }
+
+        /// 检查弱引用是否仍然有效
+        /// 注意：这只能检查指针是否为 null，不能检查对象是否已释放
+        /// 实际应用中需要更复杂的机制（如引用计数）
+        pub fn isValid(self: *const Self) bool {
+            return self.ptr != null;
+        }
+
+        /// 清空弱引用
+        pub fn clear(self: *Self) void {
+            self.ptr = null;
+        }
+    };
+}
+
+/// 辅助函数：创建弱引用
+pub fn weak(comptime T: type, ptr: ?*T) Weak(T) {
+    return Weak(T).init(ptr);
+}

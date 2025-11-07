@@ -12,6 +12,7 @@ const pointer_usage = @import("examples/pointer_usage.zig");
 const owned_deep_copy = @import("examples/owned_deep_copy.zig");
 const nested_lifetime_control = @import("examples/nested_lifetime_control.zig");
 const thread_transfer = @import("examples/thread_transfer.zig");
+const circular_reference = @import("examples/circular_reference.zig");
 
 pub fn main() !void {
     std.debug.print("Zig 生命周期管理系统示例\n", .{});
@@ -85,6 +86,14 @@ pub fn main() !void {
     thread_transfer.nestedOwnedSendInThreads();
     thread_transfer.multiThreadTransfer();
     thread_transfer.transferViaChannel();
+
+    // 运行循环引用避免示例
+    circular_reference.circularReferenceProblem();
+    circular_reference.solutionUsingIndices();
+    circular_reference.solutionUsingTreeStructure();
+    circular_reference.solutionUsingWeakReferences();
+    circular_reference.solutionRedesignDataStructure();
+    circular_reference.bestPractices();
 
     std.debug.print("所有示例运行完成！\n", .{});
 }
