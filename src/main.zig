@@ -13,6 +13,7 @@ const owned_deep_copy = @import("examples/owned_deep_copy.zig");
 const nested_lifetime_control = @import("examples/nested_lifetime_control.zig");
 const thread_transfer = @import("examples/thread_transfer.zig");
 const circular_reference = @import("examples/circular_reference.zig");
+const memory_leak = @import("examples/memory_leak.zig");
 
 pub fn main() !void {
     std.debug.print("Zig 生命周期管理系统示例\n", .{});
@@ -94,6 +95,16 @@ pub fn main() !void {
     circular_reference.solutionUsingWeakReferences();
     circular_reference.solutionRedesignDataStructure();
     circular_reference.bestPractices();
+
+    // 运行内存泄漏避免示例
+    memory_leak.memoryLeakProblem();
+    memory_leak.solutionUsingDefer();
+    memory_leak.solutionUsingArena();
+    memory_leak.solutionUsingScope();
+    memory_leak.solutionUsingRAII();
+    memory_leak.solutionAvoidCircularReference();
+    memory_leak.solutionCheckLeaks();
+    memory_leak.bestPractices();
 
     std.debug.print("所有示例运行完成！\n", .{});
 }

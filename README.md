@@ -12,6 +12,8 @@
 - **嵌套结构体支持**: 完整支持嵌套结构体中的 Owned 类型生命周期控制
 - **线程间所有权转移**: 通过转移所有权实现线程安全（类似 Rust 的 Send trait）
 - **嵌套 OwnedSend**: 支持结构体中包含 OwnedSend 字段，可独立转移
+- **弱引用支持**: 提供 Weak 类型，用于避免循环引用
+- **内存泄漏防护**: 提供多种机制避免内存泄漏
 
 ## 快速开始
 
@@ -131,6 +133,7 @@ borrow_mut.release();
 - `borrowMut(T, owned_val)`: 创建可变借用
 - `ownedSend(T, value)`: 创建可在线程间转移的 OwnedSend 值
 - `deepCopy(T, value)`: 深度复制值（支持嵌套结构体和 Owned 类型）
+- `weak(T, ptr)`: 创建弱引用（用于避免循环引用）
 
 ## 借用规则
 
@@ -161,9 +164,11 @@ zlift/
 │       └── thread_transfer.zig
 ├── PLAN.md             # 项目计划文档
 ├── DESIGN.md           # 技术设计文档
-├── THREAD_TRANSFER.md  # 线程间所有权转移文档
-├── POINTER_USAGE.md    # 指针使用文档
-└── README.md           # 本文件
+├── THREAD_TRANSFER.md      # 线程间所有权转移文档
+├── POINTER_USAGE.md        # 指针使用文档
+├── CIRCULAR_REFERENCE.md   # 循环引用避免文档
+├── MEMORY_LEAK.md          # 内存泄漏避免文档
+└── README.md               # 本文件
 ```
 
 ## 设计理念
@@ -237,6 +242,34 @@ var config = Config{...};
 // 可以独立转移每个字段
 const moved_host = config.host.sendToThread();
 // config.port 仍然有效
+```
+
+### 弱引用（Weak）
+
+用于避免循环引用：
+
+```zig
+var owned_val = lifetime.owned(i32, 100);
+var weak_ref = lifetime.weak(i32, owned_val.get());
+
+// 弱引用不会阻止对象释放
+if (weak_ref.upgrade()) |ptr| {
+    std.debug.print("值: {}\n", .{ptr.*});
+}
+```
+
+### 内存泄漏防护
+
+提供多种机制避免内存泄漏：
+
+```zig
+// 使用 defer 确保释放
+var borrow = owned_val.borrow();
+defer borrow.release();
+
+// 使用 Arena 统一管理
+var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+defer arena.deinit();
 ```
 
 ## 限制
