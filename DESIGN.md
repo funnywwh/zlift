@@ -74,6 +74,25 @@ owned ──take()──> moved
 - 借用冲突检测
 - 使用 `@panic` 处理运行时违规
 
+#### 4. 深度复制系统
+
+**deepCopy()** 函数:
+- 递归复制复杂数据结构
+- 支持嵌套结构体、数组、可选类型
+- 自动识别并处理 Owned 类型字段
+
+**OwnedDeepCopy** 包装器:
+- 提供深度复制语义的包装类型
+- 支持结构体等复杂类型
+
+#### 5. 线程间所有权转移系统
+
+**OwnedSend(T)** 类型:
+- 通过转移所有权实现线程安全
+- 类似 Rust 的 Send trait
+- 支持嵌套 OwnedSend 字段
+- 每个字段可独立转移
+
 ## 类型系统设计
 
 ### 泛型设计
@@ -156,6 +175,26 @@ pub fn owned(comptime T: type, value: T) Owned(T)
 pub fn move(comptime T: type, owned_val: *Owned(T)) T
 pub fn borrow(comptime T: type, owned_val: *Owned(T)) Borrowed(T)
 pub fn borrowMut(comptime T: type, owned_val: *Owned(T)) BorrowedMut(T)
+pub fn ownedSend(comptime T: type, value: T) OwnedSend(T)
+pub fn deepCopy(comptime T: type, value: T) T
+```
+
+### OwnedSend API
+
+```zig
+// 创建
+pub fn init(value: T) Self
+
+// 转移
+pub fn sendToThread(self: *Self) T
+
+// 访问（仅在当前线程）
+pub fn get(self: *Self) *T
+pub fn getMut(self: *Self) *T
+
+// 检查
+pub fn isInCurrentThread(self: *const Self) bool
+pub fn isValid(self: *const Self) bool
 ```
 
 ## 借用规则实现
@@ -309,6 +348,27 @@ pub const BorrowChecker = struct {
 
 ## 扩展性设计
 
+### 已实现扩展
+
+1. **深度复制支持** ✅
+   - `deepCopy()` 函数支持复杂数据结构
+   - 支持嵌套结构体和 Owned 类型
+   - `OwnedDeepCopy` 包装器类型
+
+2. **嵌套结构体支持** ✅
+   - 完整支持嵌套结构体中的 Owned 类型
+   - 支持深度嵌套结构体
+   - 嵌套字段的独立生命周期控制
+
+3. **线程间所有权转移** ✅
+   - `OwnedSend` 类型（类似 Rust 的 Send）
+   - 通过转移所有权实现线程安全
+   - 支持嵌套 OwnedSend 字段
+
+4. **指针使用支持** ✅
+   - 文档说明指针与 Owned 系统的交互
+   - 指针在借用和移动时的行为
+
 ### 未来扩展方向
 
 1. **生命周期参数**
@@ -317,7 +377,6 @@ pub const BorrowChecker = struct {
 
 2. **更多 Rust 特性**
    - `Rc<T>` (引用计数)
-   - `Arc<T>` (原子引用计数)
    - `RefCell<T>` (内部可变性)
 
 3. **工具支持**

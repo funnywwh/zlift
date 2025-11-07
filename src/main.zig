@@ -10,6 +10,8 @@ const nested_types = @import("examples/nested_types.zig");
 const deep_copy = @import("examples/deep_copy.zig");
 const pointer_usage = @import("examples/pointer_usage.zig");
 const owned_deep_copy = @import("examples/owned_deep_copy.zig");
+const nested_lifetime_control = @import("examples/nested_lifetime_control.zig");
+const thread_transfer = @import("examples/thread_transfer.zig");
 
 pub fn main() !void {
     std.debug.print("Zig 生命周期管理系统示例\n", .{});
@@ -66,6 +68,23 @@ pub fn main() !void {
     owned_deep_copy.structWithOwnedArrayDeepCopy();
     owned_deep_copy.mixedTypesDeepCopy();
     owned_deep_copy.ownedCloneExample();
+
+    // 运行嵌套结构体生命周期控制示例
+    nested_lifetime_control.nestedOwnedLifetimeControl();
+    nested_lifetime_control.deeplyNestedLifetimeControl();
+    nested_lifetime_control.nestedStructMoveSemantics();
+    nested_lifetime_control.borrowRulesInNestedStruct();
+    nested_lifetime_control.nestedStructFunctionPassing();
+
+    // 运行线程间所有权转移示例（类似 Rust 的 Send）
+    thread_transfer.threadTransferExample();
+    thread_transfer.transferSafetyExample();
+    thread_transfer.nestedStructTransfer();
+    thread_transfer.structWithOwnedSendFields();
+    thread_transfer.deeplyNestedOwnedSend();
+    thread_transfer.nestedOwnedSendInThreads();
+    thread_transfer.multiThreadTransfer();
+    thread_transfer.transferViaChannel();
 
     std.debug.print("所有示例运行完成！\n", .{});
 }

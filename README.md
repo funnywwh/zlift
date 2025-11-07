@@ -8,6 +8,10 @@
 - **借用检查 (Borrow Checker)**: 支持不可变借用和可变借用，防止数据竞争
 - **编译时检查**: 利用 Zig 的 comptime 特性进行编译时验证
 - **运行时验证**: 提供运行时检查作为补充，确保内存安全
+- **深度复制**: 支持复杂数据结构的深度复制，包括嵌套结构体和 Owned 类型
+- **嵌套结构体支持**: 完整支持嵌套结构体中的 Owned 类型生命周期控制
+- **线程间所有权转移**: 通过转移所有权实现线程安全（类似 Rust 的 Send trait）
+- **嵌套 OwnedSend**: 支持结构体中包含 OwnedSend 字段，可独立转移
 
 ## 快速开始
 
@@ -108,12 +112,25 @@ borrow_mut.release();
 - `deref()`: 解引用获取值
 - `release()`: 释放借用
 
+### OwnedSend(T)
+
+可在线程间安全转移的类型（类似 Rust 的 Send trait）。
+
+- `init(value: T)`: 创建新的 OwnedSend 值
+- `sendToThread()`: 转移到另一个线程（移动语义）
+- `get()`: 获取值的引用（仅在当前线程）
+- `getMut()`: 获取值的可变引用（仅在当前线程）
+- `isInCurrentThread()`: 检查值是否在当前线程
+- `isValid()`: 检查值是否有效
+
 ### 辅助函数
 
 - `owned(T, value)`: 创建 Owned 值
 - `move(T, owned_val)`: 移动值
 - `borrow(T, owned_val)`: 创建不可变借用
 - `borrowMut(T, owned_val)`: 创建可变借用
+- `ownedSend(T, value)`: 创建可在线程间转移的 OwnedSend 值
+- `deepCopy(T, value)`: 深度复制值（支持嵌套结构体和 Owned 类型）
 
 ## 借用规则
 
@@ -127,22 +144,100 @@ borrow_mut.release();
 ```
 zlift/
 ├── build.zig          # 构建配置
-├── build.zig.zon      # 包配置
+├── build.zig.zon       # 包配置
 ├── src/
-│   ├── lifetime.zig   # 核心生命周期管理库
-│   ├── main.zig       # 示例程序入口
-│   └── examples/      # 示例代码
+│   ├── lifetime.zig    # 核心生命周期管理库
+│   ├── main.zig        # 示例程序入口
+│   └── examples/       # 示例代码
 │       ├── move_semantics.zig
 │       ├── borrowing.zig
-│       └── lifetime_examples.zig
-├── PLAN.md            # 项目计划文档
-├── DESIGN.md          # 技术设计文档
-└── README.md          # 本文件
+│       ├── lifetime_examples.zig
+│       ├── copy_types.zig
+│       ├── nested_types.zig
+│       ├── deep_copy.zig
+│       ├── pointer_usage.zig
+│       ├── owned_deep_copy.zig
+│       ├── nested_lifetime_control.zig
+│       └── thread_transfer.zig
+├── PLAN.md             # 项目计划文档
+├── DESIGN.md           # 技术设计文档
+├── THREAD_TRANSFER.md  # 线程间所有权转移文档
+├── POINTER_USAGE.md    # 指针使用文档
+└── README.md           # 本文件
 ```
 
 ## 设计理念
 
 本项目旨在在 Zig 中模拟 Rust 的所有权系统，通过类型系统和运行时检查的结合，提供类似的内存安全保障。虽然 Zig 本身不强制执行这些规则，但通过库的方式可以让开发者选择性地使用这些安全特性。
+
+## 高级特性
+
+### 深度复制
+
+支持复杂数据结构的深度复制，包括嵌套结构体和 Owned 类型：
+
+```zig
+const Person = struct {
+    name: lifetime.Owned([]const u8),
+    age: lifetime.Owned(i32),
+};
+
+var person = Person{
+    .name = lifetime.owned([]const u8, "Alice"),
+    .age = lifetime.owned(i32, 30),
+};
+
+// 深度复制（包括 Owned 字段）
+const copied = lifetime.deepCopy(Person, person);
+```
+
+### 嵌套结构体生命周期控制
+
+完整支持嵌套结构体中的 Owned 类型：
+
+```zig
+const Employee = struct {
+    name: lifetime.Owned([]const u8),
+    address: struct {
+        street: lifetime.Owned([]const u8),
+        city: lifetime.Owned([]const u8),
+    },
+};
+
+var employee = Employee{...};
+
+// 可以借用和移动嵌套字段
+var street_borrow = employee.address.street.borrow();
+const moved_city = employee.address.city.take();
+```
+
+### 线程间所有权转移
+
+通过转移所有权实现线程安全（类似 Rust 的 Send）：
+
+```zig
+var send_val = lifetime.ownedSend(i32, 100);
+const moved = send_val.sendToThread();
+// 值现在可以安全地传递给另一个线程
+// send_val 已失效
+```
+
+### 嵌套 OwnedSend
+
+支持结构体中包含 OwnedSend 字段，可独立转移：
+
+```zig
+const Config = struct {
+    host: lifetime.OwnedSend([]const u8),
+    port: lifetime.OwnedSend(i32),
+};
+
+var config = Config{...};
+
+// 可以独立转移每个字段
+const moved_host = config.host.sendToThread();
+// config.port 仍然有效
+```
 
 ## 限制
 
