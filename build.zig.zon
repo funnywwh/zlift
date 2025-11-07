@@ -1,0 +1,11 @@
+.{
+    .name = .zlift,
+    .version = "0.1.0",
+    .fingerprint = 0x2779ce632909738e,
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
